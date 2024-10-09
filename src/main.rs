@@ -1,5 +1,3 @@
-use std::fs;
-
 use escpos::driver::ConsoleDriver;
 use escpos::printer::Printer;
 use escpos::printer_options::PrinterOptions;
@@ -59,7 +57,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let wrap_opts = || textwrap::Options::new(chars_per_line.into());
 
-    let mini: MiniCrossword = serde_json::from_slice(&fs::read("mini_20241009.json")?)?;
+    let mini: MiniCrossword =
+        ureq::get("https://www.nytimes.com/svc/crosswords/v6/puzzle/mini.json")
+            .set("User-Agent", "miniprinter")
+            .call()?
+            .into_json()?;
 
     let puzzle = &mini.body[0];
 
@@ -86,7 +88,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut buf = tiny_skia::Pixmap::new(canvas_size.width(), canvas_size.height()).unwrap();
     resvg::render(&svg, trans, &mut buf.as_mut());
     let png = buf.encode_png()?;
-    fs::write("board.png", &png)?;
 
     let mut printer = Printer::new(
         ConsoleDriver::open(true),
